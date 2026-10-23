@@ -1098,17 +1098,20 @@ export const estimatePrompt = (context: SessionContext.Loaded) => {
 
 /**
  * The largest request the model takes while leaving room for its reply: `RESERVE_SHARE` of the window, or
- * `RESERVE_MIN` when that is more. A summary request that must be shrunk is aimed at the same size. A window too small
- * to give up `RESERVE_MIN` keeps `RESERVE_SHARE`.
+ * `RESERVE_MIN` when that is more, and never less than the output tokens a request reserves — otherwise a
+ * request that still fits overflows before automatic compaction runs. A summary request that must be shrunk
+ * is aimed at the same size. A window too small to give up `RESERVE_MIN` keeps `RESERVE_SHARE`.
  */
 const calculateCeiling = (limit: SessionContext.Loaded["model"]["limit"], buffer: number | undefined) => {
   // Unknown limits are reported as 0. An unknown input limit falls back to the context window; with no window at
   // all, only a provider rejection can limit the request.
   const window = limit.input || limit.context
   if (window <= 0) return Number.POSITIVE_INFINITY
+  // The reservation raise is ignored when it would leave the window no room, such as an output limit copied from a larger model.
+  const reserved = Math.min(SessionModelRequest.outputReservation(limit), window - 1)
   // A buffer that leaves no room, such as one set for a larger model, is ignored.
-  if (buffer !== undefined && buffer < window) return window - buffer
-  return window - Math.max(Math.floor(window * RESERVE_SHARE), window >= 2 * RESERVE_MIN ? RESERVE_MIN : 0)
+  if (buffer !== undefined && buffer < window) return window - Math.max(buffer, reserved)
+  return window - Math.max(Math.floor(window * RESERVE_SHARE), window >= 2 * RESERVE_MIN ? RESERVE_MIN : 0, reserved)
 }
 
 /** The largest summary request that leaves `RESERVE_MIN` of the window for the summary. Zero for an unknown window. */
