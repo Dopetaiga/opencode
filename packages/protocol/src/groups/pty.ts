@@ -11,12 +11,6 @@ export const PTY_CONNECT_TOKEN_HEADER = "x-opencode-ticket"
 export const PTY_CONNECT_TOKEN_HEADER_VALUE = "1"
 export const PTY_CONNECT_PATH = "/api/pty/:ptyID/connect"
 
-const PTY_CONNECT_URL = /^\/api\/pty\/[^/]+\/connect$/
-
-export function hasPtyConnectTicketURL(url: URL) {
-  return PTY_CONNECT_URL.test(url.pathname) && !!url.searchParams.get(PTY_CONNECT_TICKET_QUERY)
-}
-
 export const PtyGroup = HttpApiGroup.make("server.pty")
   .add(
     HttpApiEndpoint.get("pty.list", "/api/pty", {
