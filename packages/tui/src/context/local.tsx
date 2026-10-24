@@ -59,9 +59,6 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       const agents = createMemo(() =>
         (data.location.agent.list(location.ref) ?? []).filter((agent) => agent.mode !== "subagent" && !agent.hidden),
       )
-      const visibleAgents = createMemo(() =>
-        (data.location.agent.list(location.ref) ?? []).filter((agent) => !agent.hidden),
-      )
       const [agentStore, setAgentStore] = createStore({
         current: undefined as string | undefined,
         draftBySession: {} as Record<string, { agent?: string } | undefined>,
@@ -126,9 +123,12 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           })
         },
         color(id: string) {
-          const index = visibleAgents().findIndex((agent) => agent.id === id)
+          // Hidden agents keep their configured color — they are only excluded from the picker, not from
+          // messages they author when a command or CLI default selects them.
+          const all = data.location.agent.list(location.ref) ?? []
+          const index = all.findIndex((agent) => agent.id === id)
           if (index === -1) return colors()[0]
-          const agent = visibleAgents()[index]
+          const agent = all[index]
 
           if (agent?.color) return RGBA.fromHex(agent.color)
           return colors()[index % colors().length]
