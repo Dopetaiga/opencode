@@ -92,6 +92,13 @@ const layer = Layer.effect(
     const location = yield* Location.Service
     const permission = yield* Permission.Service
 
+    // Resolve the boundaries once, at layer construction: a project opened through a symlink
+    // (opencode run keeps $PWD; macOS /tmp → /private/tmp) must still count as internal when
+    // the resolved target paths are compared against it.
+    const realDirectory = yield* fs.resolve(location.directory)
+    const worktree = path.resolve(location.project.directory)
+    const realWorktree = yield* fs.resolve(worktree)
+
     /**
      * Resolve symlinks in the longest existing prefix of `absolute`, keeping the not-yet-existing
      * tail lexical, so a link cannot change which file the permission rules are matched against.
@@ -100,9 +107,11 @@ const layer = Layer.effect(
       const missing: string[] = []
       let current = absolute
       while (true) {
+        // Any stat error counts as missing, not just NotFound: a parent that is still a file
+        // fails with ENOTDIR, and a prospective `parent/child.txt` must keep resolving.
         const stat = yield* fs
           .stat(current)
-          .pipe(Effect.catchReason("PlatformError", "NotFound", () => Effect.undefined))
+          .pipe(Effect.catchTag(["PlatformError"], () => Effect.undefined))
         if (stat) break
         const parent = path.dirname(current)
         if (parent === current) break
@@ -116,13 +125,12 @@ const layer = Layer.effect(
     const resolve = Effect.fn("FileAccess.resolve")(function* (input: ResolveInput) {
       const absolute = AbsolutePath.make(resolvePath(location.directory, input.path))
       const real = yield* resolveReal(absolute)
-      const worktree = path.resolve(location.project.directory)
       const internal =
-        FSUtil.contains(location.directory, real) ||
-        (worktree !== path.parse(worktree).root && FSUtil.contains(worktree, real))
+        FSUtil.contains(realDirectory, real) ||
+        (realWorktree !== path.parse(realWorktree).root && FSUtil.contains(realWorktree, real))
       if (internal) {
         const resource = slash(path.relative(location.directory, absolute) || ".")
-        const realResource = slash(path.relative(location.directory, real) || ".")
+        const realResource = slash(path.relative(realDirectory, real) || ".")
         return {
           absolute,
           resource,
