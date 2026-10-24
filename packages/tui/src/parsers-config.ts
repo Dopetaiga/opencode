@@ -123,7 +123,10 @@ export default {
     },
     {
       filetype: "php",
-      wasm: "https://github.com/tree-sitter/tree-sitter-php/releases/download/v0.24.2/tree-sitter-php.wasm",
+      // The php_only variant treats the whole document as PHP code, so blocks without a `<?php` opening
+      // tag (how models usually emit short PHP excerpts) still highlight; the bundled highlights query has
+      // no text/program references, and blocks that do open with `<?php` highlight identically either way.
+      wasm: "https://github.com/tree-sitter/tree-sitter-php/releases/download/v0.24.2/tree-sitter-php_only.wasm",
       queries: {
         highlights: [
           // NOTE: This nvim-treesitter query is currently broken, because the parser is not compatible with the query apparently.
