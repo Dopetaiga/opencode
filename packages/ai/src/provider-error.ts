@@ -63,6 +63,8 @@ const exclusions = [
   /^(throttling error|service unavailable):/i,
   /rate limit/i,
   /too many requests/i,
+  // A per-window token throttle is a rate limit, not an overflow: shortening history cannot fix it.
+  /too many tokens per (?:minute|second|hour|day)/i,
   // Cohere reports an output limit above the model maximum as "too many tokens"; compaction cannot fix it.
   /max[_ ]tokens must be less than/i,
 ]
@@ -169,7 +171,7 @@ const CONTENT_POLICY_CODES = new Set([
 const GATEWAY_CODE_LABEL = /^[^:\n]+: \[([A-Za-z0-9_.-]+)\]/
 // xAI reports an invalid API key as HTTP 400 with the generic `invalid-argument` code.
 const AUTH_TEXT = /incorrect api key provided/i
-const RATE_LIMIT_TEXT = /rate increased too quickly|rate[-_\s]?limit|too[_\s]?many[_\s]?requests/i
+const RATE_LIMIT_TEXT = /rate increased too quickly|rate[-_\s]?limit|too[_\s]?many[_\s]?requests|too many tokens per (?:minute|second|hour|day)/i
 // Only consulted on 429, where throttles and account caps share a status.
 // Z.ai reports balance, plan expiry, plan limits, and plan model access on 429.
 const QUOTA_TEXT =
